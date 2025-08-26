@@ -1,7 +1,7 @@
 body {
   font-family: "Comic Sans MS", cursive, sans-serif;
   text-align: center;
-  background: #f8bbd0; /* pastel pink */
+  background: #f8bbd0; /* tea pink */
   margin: 0;
   padding: 20px;
   color: #4a148c;
@@ -12,7 +12,7 @@ h1 {
 }
 
 #scoreboard {
-  background: #fff176; /* pastel yellow */
+  background: #fff176; /* dark yellow */
   padding: 10px;
   border-radius: 10px;
   font-weight: bold;
@@ -47,7 +47,7 @@ h1 {
 }
 
 #reset {
-  background: #b2ebf2; /* pastel blue */
+  background: #b2ebf2; /* lilac */
   border: none;
   padding: 10px 20px;
   font-size: 16px;
