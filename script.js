@@ -98,9 +98,21 @@ function playerMove(index) {
 
 function aiMove() {
   const boardState = getBoard();
-  const [, move] = minimax(boardState, true);
-  if (move !== null) {
-    cells[move].textContent = computer;
+
+  // 50% chance AI plays smart, 50% random
+  if (Math.random() < 0.5) {
+    // Smart move
+    const [, move] = minimax(boardState, true);
+    if (move !== null) {
+      cells[move].textContent = computer;
+    }
+  } else {
+    // Random move
+    const available = emptyCells(boardState);
+    if (available.length > 0) {
+      const move = available[Math.floor(Math.random() * available.length)];
+      cells[move].textContent = computer;
+    }
   }
   finalizeTurn();
 }
