@@ -1,107 +1,34 @@
-const board = document.getElementById("board");
+const cells = document.querySelectorAll(".cell");
+const statusText = document.getElementById("status");
 const resetBtn = document.getElementById("reset");
-const playerScoreEl = document.getElementById("player-score");
-const computerScoreEl = document.getElementById("computer-score");
-const tiesEl = document.getElementById("ties");
 
-let cells = [];
-let gameOver = false;
-let player = "X";
+let currentPlayer = "X";
 let computer = "O";
-let playerScore = 0, computerScore = 0, ties = 0;
+let running = true;
 
-// --- Create board ---
-function createBoard() {
-  board.innerHTML = "";
-  cells = [];
-  for (let i = 0; i < 9; i++) {
-    const cell = document.createElement("div");
-    cell.classList.add("cell");
-    cell.dataset.index = i;
-    cell.addEventListener("click", () => playerMove(i));
-    board.appendChild(cell);
-    cells.push(cell);
-  }
-}
-createBoard();
+// Add event listeners
+cells.forEach((cell, index) => {
+  cell.addEventListener("click", () => userMove(index));
+});
+resetBtn.addEventListener("click", resetGame);
 
-// --- Helpers ---
-function getBoard() {
-  return cells.map(c => c.textContent);
-}
+function userMove(index) {
+  if (!running || cells[index].textContent !== "") return;
 
-function emptyCells(boardState) {
-  return boardState.map((val, i) => val === "" ? i : null).filter(v => v !== null);
-}
-
-function winner(boardState) {
-  const wins = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-  for (let [a,b,c] of wins) {
-    if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
-      return boardState[a];
-    }
-  }
-  return null;
-}
-
-function isFull(boardState) {
-  return boardState.every(c => c !== "");
-}
-
-// --- Minimax ---
-function minimax(boardState, maximizing) {
-  const win = winner(boardState);
-  if (win === computer) return [1];
-  if (win === player) return [-1];
-  if (isFull(boardState)) return [0];
-
-  let bestMove = null;
-
-  if (maximizing) {
-    let bestScore = -2;
-    for (let idx of emptyCells(boardState)) {
-      boardState[idx] = computer;
-      let [score] = minimax(boardState, false);
-      boardState[idx] = "";
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = idx;
-      }
-    }
-    return [bestScore, bestMove];
-  } else {
-    let bestScore = 2;
-    for (let idx of emptyCells(boardState)) {
-      boardState[idx] = player;
-      let [score] = minimax(boardState, true);
-      boardState[idx] = "";
-      if (score < bestScore) {
-        bestScore = score;
-        bestMove = idx;
-      }
-    }
-    return [bestScore, bestMove];
-  }
-}
-
-// --- Gameplay ---
-function playerMove(index) {
-  if (gameOver || cells[index].textContent !== "") return;
-  cells[index].textContent = player;
+  cells[index].textContent = currentPlayer;
   finalizeTurn();
-  if (!gameOver) setTimeout(aiMove, 300);
+
+  if (running) {
+    setTimeout(aiMove, 500); // small delay for natural feel
+  }
 }
 
 function aiMove() {
   const boardState = getBoard();
 
-  // 50% chance AI plays smart, 50% random
+  // 50% chance smart move, 50% random move
   if (Math.random() < 0.5) {
-    // Smart move
+    // Smart move using minimax
     const [, move] = minimax(boardState, true);
     if (move !== null) {
       cells[move].textContent = computer;
@@ -118,41 +45,94 @@ function aiMove() {
 }
 
 function finalizeTurn() {
-  const boardState = getBoard();
-  const win = winner(boardState);
-  if (win) {
-    gameOver = true;
-    if (win === player) {
-      playerScore++;
-      alert("You win! 🎉\nPlay again?");
-    } else {
-      computerScore++;
-      alert("Computer wins! 🤖\nPlay again?");
+  const winner = checkWinner();
+
+  if (winner) {
+    statusText.textContent = winner === "Draw" ? "It's a Draw!" : `${winner} Wins! 🎉`;
+    running = false;
+  }
+}
+
+function getBoard() {
+  return Array.from(cells).map(cell => cell.textContent || "");
+}
+
+function emptyCells(board) {
+  return board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+}
+
+function checkWinner() {
+  const board = getBoard();
+  const winConditions = [
+    [0,1,2], [3,4,5], [6,7,8], // rows
+    [0,3,6], [1,4,7], [2,5,8], // cols
+    [0,4,8], [2,4,6]           // diagonals
+  ];
+
+  for (let condition of winConditions) {
+    const [a, b, c] = condition;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a];
     }
-    updateScore();
-    createBoard();
-    gameOver = false;
-    return;
   }
-  if (isFull(boardState)) {
-    gameOver = true;
-    ties++;
-    alert("It's a tie! 🤝\nPlay again?");
-    updateScore();
-    createBoard();
-    gameOver = false;
+
+  if (board.every(cell => cell !== "")) {
+    return "Draw";
   }
+  return null;
+}
+
+// Minimax for smart AI
+function minimax(board, isMaximizing) {
+  const winner = checkWinnerForMinimax(board);
+  if (winner === computer) return [1, null];
+  if (winner === currentPlayer) return [-1, null];
+  if (board.every(cell => cell !== "")) return [0, null];
+
+  if (isMaximizing) {
+    let bestScore = -Infinity, bestMove = null;
+    for (let move of emptyCells(board)) {
+      board[move] = computer;
+      let [score] = minimax(board, false);
+      board[move] = "";
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+    return [bestScore, bestMove];
+  } else {
+    let bestScore = Infinity, bestMove = null;
+    for (let move of emptyCells(board)) {
+      board[move] = currentPlayer;
+      let [score] = minimax(board, true);
+      board[move] = "";
+      if (score < bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+    return [bestScore, bestMove];
+  }
+}
+
+function checkWinnerForMinimax(board) {
+  const winConditions = [
+    [0,1,2], [3,4,5], [6,7,8],
+    [0,3,6], [1,4,7], [2,5,8],
+    [0,4,8], [2,4,6]
+  ];
+  for (let condition of winConditions) {
+    const [a, b, c] = condition;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a];
+    }
+  }
+  return null;
 }
 
 function resetGame() {
-  createBoard();
-  gameOver = false;
+  cells.forEach(cell => (cell.textContent = ""));
+  statusText.textContent = "Your turn (X)";
+  running = true;
 }
-
-function updateScore() {
-  playerScoreEl.textContent = `Player: ${playerScore}`;
-  computerScoreEl.textContent = `Computer: ${computerScore}`;
-  tiesEl.textContent = `Ties: ${ties}`;
-}
-
-resetBtn.addEventListener("click", resetGame);
